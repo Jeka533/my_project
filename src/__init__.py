@@ -5,5 +5,5 @@ __all__ = [
     'get_mask_card_number',
     'get_mask_account',
     'mask_account_card',
-    'get_date'
+    'get_date '
 ]
