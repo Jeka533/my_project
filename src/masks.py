@@ -23,4 +23,3 @@ def get_mask_account(account_number: str) -> str:
 
 
 print(get_mask_account(account_number="12345678900987654321"))
-

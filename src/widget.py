@@ -79,4 +79,4 @@ if __name__ == "__main__":
 
     for test in test_dates:
         result = get_date(test)
-        print(f"{test:35}  {result}")
+        print(f"{test:35} -> {result}")
