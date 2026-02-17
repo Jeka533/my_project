@@ -10,5 +10,27 @@
 ### Сортировать операции по дате выполнения
 
 # Установка
-*1. Клонируйте репозиторий:
-*git clone
+* Клонируйте репозиторий:
+* git clone https://github.com/Jeka533/my_project
+* 
+# Импорт модуля
+*import processing
+
+# Формат данных
+* Функции работают со списком словарей, каждый из которых представляет банковскую операцию:
+* operation = {
+*    'id': 41428829,                          # Уникальный идентификатор
+*    'state': 'EXECUTED',                      # Статус операции
+*    'date': '2019-07-03T18:35:29.512364'      # Дата в формате ISO 8601
+}
+
+# Функция filter_by_state
+#### Фильтрует список операций по значению ключа state.
+#### def filter_by_state(transactions: list, state: str = 'EXECUTED')
+
+# Функция sort_by_date
+* def sort_by_date(transactions: list, reverse: bool = True)
+
+# Контакты
+* #### Email: evgeniykoval833@mail.ru
+* #### GitHub: Jeka533
