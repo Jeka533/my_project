@@ -1,12 +1,15 @@
 from src.masks import get_mask_account, get_mask_card_number
 
 
+"""Модуль для работы с виджетами."""
+
+
 def mask_account_card(account_info: str) -> str:
     """
     Маскирует номер карты или счета.
     """
     # Разделяем строку на тип и номер
-    parts = account_info.rsplit(' ', 1)
+    parts = account_info.rsplit(" ", 1)
 
     if len(parts) != 2:
         return "Ошибка: неверный формат данных"
@@ -31,10 +34,10 @@ def get_date(date_string: str) -> str:
         return "Ошибка: пустая строка"
 
     # Извлекаем только дату (часть до T)
-    date_part = date_string.split('T')[0]
+    date_part = date_string.split("T")[0]
 
     # Разбиваем дату на компоненты
-    date_components = date_part.split('-')
+    date_components = date_part.split("-")
 
     if len(date_components) != 3:
         return "Ошибка: неверный формат даты"
@@ -58,7 +61,7 @@ if __name__ == "__main__":
         "Visa Classic 6831982476737658",
         "Visa Platinum 8990922113665229",
         "Visa Gold 5999414228426353",
-        "Счет 73654108430135874305"
+        "Счет 73654108430135874305",
     ]
 
     print("\n1. Функция mask_account_card:")
@@ -72,7 +75,7 @@ if __name__ == "__main__":
         "2024-03-11T02:26:18.671407",
         "2023-12-31T23:59:59",
         "2024-01-01T00:00:00",
-        "2024-02-29T15:30:45.123456"
+        "2024-02-29T15:30:45.123456",
     ]
 
     print("\n2. Функция get_date:")
