@@ -1,4 +1,7 @@
-def filter_by_state(transactions, state='EXCUTED'):
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+
+def filter_by_state(transactions: List[Dict[str, Any]], state: str = 'EXECUTED') -> List[Dict[str, Any]]:
     return [item for item in transactions if item.get('state') == state]
 """
 Фильтрует список словарей по значению ключа 'state'.
@@ -21,7 +24,7 @@ print(executed_transactions)
 canceled_transactions = filter_by_state(data, 'CANCELED')
 print(canceled_transactions)
 
-def sort_by_date(transactions, reverse=True):
+def sort_by_date(transactions: List[Dict[str, Any]], reverse: bool = True) -> List[Dict[str, Any]]:
     """
     Сортирует список словарей по дате.
     """
