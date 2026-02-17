@@ -1,12 +1,11 @@
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import List, Dict, Any
+
 
 def filter_by_state(transactions: List[Dict[str, Any]], state: str = 'EXECUTED') -> List[Dict[str, Any]]:
     return [item for item in transactions if item.get('state') == state]
-"""
-Фильтрует список словарей по значению ключа 'state'.
-"""
 
+
+"""Фильтрует список словарей по значению ключа 'state'."""
 # Исходные данные
 data = [
     {'id': 414288290, 'state': 'EXECUTED', 'date': '2019-07-03T18:35:29.512364'},
@@ -24,13 +23,16 @@ print(executed_transactions)
 canceled_transactions = filter_by_state(data, 'CANCELED')
 print(canceled_transactions)
 
+
 def sort_by_date(transactions: List[Dict[str, Any]], reverse: bool = True) -> List[Dict[str, Any]]:
     """
     Сортирует список словарей по дате.
     """
-    return sorted(transactions, key=lambda x: x ['date'], reverse=reverse)
+    return sorted(transactions, key=lambda x: x['date'], reverse=reverse)
+
 
 # Исходные данные
+
 data = [
     {'id': 41428829, 'state': 'EXECUTED', 'date': '2019-07-03T18:35:29.512364'},
     {'id': 939719570, 'state': 'EXECUTED', 'date': '2018-06-30T02:08:58.425572'},
@@ -50,6 +52,5 @@ print(sorted_desc)
 # Сортировка по возрастанию - сначала старые
 sorted_asc = sort_by_date(data, reverse=False)
 print(sorted_asc)
-
 # Проверка, что исходный список не изменился
 print("Исходный список:", data)
