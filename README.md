@@ -12,7 +12,6 @@
 # Установка
 * Клонируйте репозиторий:
 * git clone https://github.com/Jeka533/my_project
-
 # Импорт модуля
 *import processing
 
