@@ -1,15 +1,17 @@
-import pytest
 import sys
 from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
+
+from src.processing import filter_by_state, sort_by_date
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.processing import filter_by_state, sort_by_date
 
 
 # ТЕСТЫ ДЛЯ filter_by_state
-
 @pytest.fixture
-def test_data():
+def test_data() -> List[Dict[str, Any]]:
     """Фикстура с тестовыми данными"""
     return [
         {"id": 1, "state": "EXECUTED", "date": "2019-07-03"},
@@ -26,7 +28,7 @@ def test_data():
     ("PENDING", 1),
     ("NOT_EXIST", 0),
 ])
-def test_filter_by_state(test_data, state, expected_count):
+def test_filter_by_state(test_data: List[Dict[str, Any]], state: str, expected_count: int) -> None:
     """Тест фильтрации по разным статусам"""
     result = filter_by_state(test_data, state)
     assert len(result) == expected_count
@@ -34,12 +36,12 @@ def test_filter_by_state(test_data, state, expected_count):
         assert all(item["state"] == state for item in result)
 
 
-def test_filter_by_state_empty_list():
+def test_filter_by_state_empty_list() -> None:
     """Тест фильтрации пустого списка"""
     assert filter_by_state([]) == []
 
 
-def test_filter_by_state_default_state(test_data):
+def test_filter_by_state_default_state(test_data: List[Dict[str, Any]]) -> None:
     """Тест фильтрации со статусом по умолчанию (EXECUTED)"""
     result = filter_by_state(test_data)
     assert len(result) == 2
@@ -47,9 +49,8 @@ def test_filter_by_state_default_state(test_data):
 
 
 # ТЕСТЫ ДЛЯ sort_by_date
-
 @pytest.fixture
-def unsorted_data():
+def unsorted_data() -> List[Dict[str, Any]]:
     """Фикстура с несортированными данными"""
     return [
         {"id": 1, "date": "2020-01-01"},
@@ -59,72 +60,49 @@ def unsorted_data():
     ]
 
 
-def test_sort_by_date_descending(unsorted_data):
+def test_sort_by_date_descending(unsorted_data: List[Dict[str, Any]]) -> None:
     """Тест сортировки по убыванию (новые сначала)"""
     result = sort_by_date(unsorted_data)
-    assert [item["id"] for item in result] == [3, 1, 2, 4]  # 2021, 2020, 2019, 2018
+    assert [item["id"] for item in result] == [3, 1, 2, 4]
 
 
-def test_sort_by_date_ascending(unsorted_data):
+def test_sort_by_date_ascending(unsorted_data: List[Dict[str, Any]]) -> None:
     """Тест сортировки по возрастанию (старые сначала)"""
     result = sort_by_date(unsorted_data, is_reverse=False)
-    assert [item["id"] for item in result] == [4, 2, 1, 3]  # 2018, 2019, 2020, 2021
+    assert [item["id"] for item in result] == [4, 2, 1, 3]
 
 
-def test_sort_by_date_same_dates():
+def test_sort_by_date_same_dates() -> None:
     """Тест сортировки при одинаковых датах"""
-    data = [
+    data: List[Dict[str, Any]] = [
         {"id": 1, "date": "2020-01-01"},
         {"id": 2, "date": "2020-01-01"},
         {"id": 3, "date": "2019-01-01"},
     ]
     result = sort_by_date(data)
-    # Порядок элементов с одинаковой датой может быть любым
     assert result[0]["date"] == "2020-01-01"
     assert result[1]["date"] == "2020-01-01"
     assert result[2]["date"] == "2019-01-01"
 
 
-@pytest.mark.parametrize("date_format", [
-    "2020-01-01T10:30:00",           # ISO с временем
-    "2020-01-01",                     # Только дата
-    "2020/01/01",                      # Со слешами
-    "01.01.2020",                      # Российский формат
-])
-def test_sort_by_date_different_formats(date_format):
-    """Тест сортировки с разными форматами дат"""
-    data = [
-        {"id": 2, "date": "2019-01-01"},
-        {"id": 1, "date": date_format},
-        {"id": 3, "date": "2021-01-01"},
-    ]
-    try:
-        result = sort_by_date(data)
-        # Проверяем, что функция не падает и возвращает список
-        assert isinstance(result, list)
-        assert len(result) == 3
-    except Exception:
-        # Если функция не поддерживает формат - пропускаем
-        pass
-
-
-def test_sort_by_date_empty_list():
+def test_sort_by_date_empty_list() -> None:
     """Тест сортировки пустого списка"""
-    assert sort_by_date([]) == []
+    empty_list: List[Dict[str, Any]] = []
+    assert sort_by_date(empty_list) == []
 
 
-def test_sort_by_date_missing_date():
+def test_sort_by_date_missing_date() -> None:
     """Тест сортировки при отсутствии ключа 'date'"""
-    data = [
+    data: List[Dict[str, Any]] = [
         {"id": 1, "date": "2020-01-01"},
-        {"id": 2},  # Нет даты
+        {"id": 2},
         {"id": 3, "date": "2019-01-01"},
     ]
     with pytest.raises(KeyError):
         sort_by_date(data)
 
 
-def test_sort_by_date_original_unchanged(unsorted_data):
+def test_sort_by_date_original_unchanged(unsorted_data: List[Dict[str, Any]]) -> None:
     """Тест, что исходный список не изменяется"""
     original_copy = unsorted_data.copy()
     sort_by_date(unsorted_data)
