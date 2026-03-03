@@ -105,23 +105,125 @@ print(get_mask_account("1234567890"))
 # Функция sort_by_date
 * def sort_by_date(transactions: list, reverse: bool = True)
 
-# Запуск тестов
-``` bash
+# Модуль generators 
+```bash
+* filter_by_currency - фильтрация транзакций по валюте
+
+* transaction_descriptions - генератор описаний транзакций
+
+* card_number_generator - генерация номеров банковских карт в заданном диапазоне
+```
+# Модуль generators - работа с генераторами
+````bash
+* Модуль предоставляет функции-генераторы для эффективной обработки больших объемов данных без загрузки всех результатов в память.
+
+1. Фильтрация по валюте - filter_by_currency
+Фильтрует транзакции по заданной валюте и возвращает итератор.
+
+python
+from src.generators import filter_by_currency
+
+transactions = [...]  # список транзакций
+
+# Получаем все USD транзакции
+usd_transactions = filter_by_currency(transactions, "USD")
+for _ in range(2):
+    print(next(usd_transactions))
+
+# Результат:
+# {
+#     "id": 939719570,
+#     "state": "EXECUTED",
+#     "date": "2018-06-30T02:08:58.425572",
+#     "operationAmount": {
+#         "amount": "9824.07",
+#         "currency": {"name": "USD", "code": "USD"}
+#     },
+#     "description": "Перевод организации",
+#     ...
+# }
+# {
+#     "id": 142264268,
+#     "state": "EXECUTED",
+#     "date": "2019-04-04T23:20:05.206878",
+#     "operationAmount": {
+#         "amount": "79114.93",
+#         "currency": {"name": "USD", "code": "USD"}
+#     },
+#     ...
+# }
+
+2. Генератор описаний - transaction_descriptions
+Возвращает описания каждой транзакции по очереди.
+
+python
+from src.generators import transaction_descriptions
+
+transactions = [...]  # список транзакций
+
+descriptions = transaction_descriptions(transactions)
+for _ in range(5):
+    print(next(descriptions))
+
+# Результат:
+# Перевод организации
+# Перевод со счета на счет
+# Перевод со счета на счет
+# Перевод с карты на карту
+# Перевод организации
+3. Генератор номеров карт - card_number_generator
+Генерирует номера банковских карт в заданном диапазоне с правильным форматированием.
+
+python
+from src.generators import card_number_generator
+
+# Генерация первых 5 номеров карт
+for card_number in card_number_generator(1, 5):
+    print(card_number)
+
+# Результат:
+# 0000 0000 0000 0001
+# 0000 0000 0000 0002
+# 0000 0000 0000 0003
+# 0000 0000 0000 0004
+# 0000 0000 0000 0005
+
+# Генерация в произвольном диапазоне
+for card_number in card_number_generator(9999999999999990, 9999999999999995):
+    print(card_number)
+
+# Результат:
+# 9999 9999 9999 9990
+# 9999 9999 9999 9991
+# 9999 9999 9999 9992
+# 9999 9999 9999 9993
+# 9999 9999 9999 9994
+# 9999 9999 9999 9995
+````
+# Преимущества использования генераторов
+````bash
+1. Экономия памяти - данные обрабатываются последовательно, не загружая все результаты в оперативную память
+
+2. Производительность - возможность начать обработку до завершения генерации всех данных
+
+3. Гибкость - удобно для поточной обработки больших объемов данных
+````
+
+
+# Тестирование
+
+##  Обзор тестирования
+Проект покрыт модульными тестами с использованием **pytest**. Всего реализовано **61 теста**, которые проверяют корректность работы основных функций.
+
+##  Запуск тестов
+
+### Установка зависимостей
+```bash
 # Установка pytest (если не установлен)
 poetry add --dev pytest
-
-# Запуск всех тестов
-pytest
-
-# Запуск с подробным выводом
-pytest -v
-
-# Запуск конкретного модуля
-pytest tests/test_masks.py -v
-pytest tests/test_widget.py -v
-pytest tests/test_processing.py -v
+# или через pip
+pip install pytest
 ```
-
 # Описание тестов
 ### Модуль masks
 * test_masks.py — тесты для функций маскировки:
