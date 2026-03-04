@@ -6,9 +6,10 @@ import subprocess
 import sys
 import os
 import shutil
+from typing import Optional
 
 
-def generate_coverage_report():
+def generate_coverage_report() -> bool:
     """Генерирует HTML отчет о покрытии тестами."""
 
     print("=" * 60)
@@ -16,11 +17,11 @@ def generate_coverage_report():
     print("=" * 60)
 
     # Убедимся, что мы в правильной директории
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(base_dir)
 
     print(f" Рабочая директория: {base_dir}")
-    print(f" Директория с исходным кодом: src/")
+    print(" Директория с исходным кодом: src/")
 
     # Очистим предыдущие отчеты
     print("\n 1. Очистка предыдущих отчетов...")
@@ -36,9 +37,9 @@ def generate_coverage_report():
 
     # Запустим тесты с измерением покрытия
     print("\n 3. Запуск тестов с измерением покрытия...")
-    result = subprocess.run([
+    result: subprocess.CompletedProcess = subprocess.run([
         sys.executable, "-m", "pytest",
-        "--cov=src",  # Важно: здесь src, не app
+        "--cov=src",
         "--cov-report=term-missing",
         "--cov-report=html:coverage_html",
         "-v",
@@ -51,7 +52,7 @@ def generate_coverage_report():
     print(result.stdout)
 
     if result.stderr:
-        print("\n⚠  Предупреждения/Ошибки:")
+        print("\n  Предупреждения/Ошибки:")
         print(result.stderr)
 
     # Проверим, есть ли данные о покрытии
@@ -59,19 +60,19 @@ def generate_coverage_report():
         print("\n Файл с данными покрытия создан")
 
         # Покажем отчет о покрытии
-        cov_result = subprocess.run([
+        cov_result: subprocess.CompletedProcess = subprocess.run([
             sys.executable, "-m", "coverage", "report"
         ], capture_output=True, text=True)
 
-        print("\n📊 Отчет о покрытии:")
+        print("\n Отчет о покрытии:")
         print(cov_result.stdout)
 
         # Проверим процент покрытия
         if cov_result.stdout:
             import re
-            match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', cov_result.stdout)
+            match: Optional[re.Match] = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', cov_result.stdout)
             if match:
-                coverage_pct = int(match.group(1))
+                coverage_pct: int = int(match.group(1))
                 if coverage_pct >= 80:
                     print(f"\n Покрытие кода тестами {coverage_pct}% - отлично!")
                 else:
@@ -79,10 +80,10 @@ def generate_coverage_report():
     else:
         print("\n Файл с данными покрытия не создан")
 
-    html_index = os.path.join("coverage_html", "index.html")
+    html_index: str = os.path.join("coverage_html", "index.html")
     if os.path.exists(html_index):
-        abs_path = os.path.abspath(html_index)
-        print(f"\n📊 HTML отчет о покрытии доступен по пути:")
+        abs_path: str = os.path.abspath(html_index)
+        print("\n HTML отчет о покрытии доступен по пути:")
         print(f"   file://{abs_path}")
         return True
     else:
@@ -91,5 +92,5 @@ def generate_coverage_report():
 
 
 if __name__ == "__main__":
-    success = generate_coverage_report()
+    success: bool = generate_coverage_report()
     sys.exit(0 if success else 1)
