@@ -1,10 +1,11 @@
 """
 Фикстуры для тестов.
 """
-import pytest
-import sys
 import os
-from typing import List, Dict, Any
+import sys
+from typing import Any, Dict, List
+
+import pytest
 
 # Добавляем корневую директорию в путь
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

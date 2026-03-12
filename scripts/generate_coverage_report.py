@@ -2,10 +2,10 @@
 """
 Скрипт для генерации отчета о покрытии кода тестами.
 """
-import subprocess
-import sys
 import os
 import shutil
+import subprocess
+import sys
 from typing import Optional
 
 
