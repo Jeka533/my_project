@@ -8,28 +8,16 @@ import pytest
 
 from src.generators import card_number_generator, filter_by_currency, transaction_descriptions
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # noqa
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # noqa
 
 
 @pytest.fixture
 def transactions() -> List[Dict[str, Any]]:
     """Фикстура с тестовыми транзакциями."""
     return [
-        {
-            "id": 1,
-            "operationAmount": {"currency": {"code": "USD"}},
-            "description": "Перевод организации"
-        },
-        {
-            "id": 2,
-            "operationAmount": {"currency": {"code": "USD"}},
-            "description": "Перевод со счета на счет"
-        },
-        {
-            "id": 3,
-            "operationAmount": {"currency": {"code": "RUB"}},
-            "description": "Перевод со счета на счет"
-        }
+        {"id": 1, "operationAmount": {"currency": {"code": "USD"}}, "description": "Перевод организации"},
+        {"id": 2, "operationAmount": {"currency": {"code": "USD"}}, "description": "Перевод со счета на счет"},
+        {"id": 3, "operationAmount": {"currency": {"code": "RUB"}}, "description": "Перевод со счета на счет"},
     ]
 
 
@@ -60,11 +48,7 @@ def test_filter_by_currency_no_matches(transactions: List[Dict[str, Any]]) -> No
 def test_transaction_descriptions(transactions: List[Dict[str, Any]]) -> None:
     """Тест получения описаний."""
     result = list(transaction_descriptions(transactions))
-    assert result == [
-        "Перевод организации",
-        "Перевод со счета на счет",
-        "Перевод со счета на счет"
-    ]
+    assert result == ["Перевод организации", "Перевод со счета на счет", "Перевод со счета на счет"]
 
 
 def test_transaction_descriptions_empty() -> None:
@@ -72,18 +56,13 @@ def test_transaction_descriptions_empty() -> None:
     assert list(transaction_descriptions([])) == []
 
 
-@pytest.mark.parametrize("start, end, expected", [
-    (1, 3, [
-        "0000 0000 0000 0001",
-        "0000 0000 0000 0002",
-        "0000 0000 0000 0003"
-    ]),
-    (9999999999999995, 9999999999999997, [
-        "9999 9999 9999 9995",
-        "9999 9999 9999 9996",
-        "9999 9999 9999 9997"
-    ]),
-])
+@pytest.mark.parametrize(
+    "start, end, expected",
+    [
+        (1, 3, ["0000 0000 0000 0001", "0000 0000 0000 0002", "0000 0000 0000 0003"]),
+        (9999999999999995, 9999999999999997, ["9999 9999 9999 9995", "9999 9999 9999 9996", "9999 9999 9999 9997"]),
+    ],
+)
 def test_card_number_generator(start: int, end: int, expected: List[str]) -> None:
     """Тест генерации номеров карт."""
     assert list(card_number_generator(start, end)) == expected

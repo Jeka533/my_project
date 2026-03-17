@@ -1,16 +1,24 @@
-# This is a sample Python script.
+from scripts.utils import load_transactions
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# Загружаем транзакции
+transactions = load_transactions("data/operations.json")
 
+# Смотрим, что получилось
+if transactions:
+    print("\nПервые 3 транзакции:")
+    print("-" * 40)
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+    # Покажем первые 3 транзакции
+    for i in range(min(3, len(transactions))):
+        t = transactions[i]
+        print(f"\nТранзакция {i + 1}:")
+        print(f"  ID: {t.get('id')}")
+        print(f"  Дата: {t.get('date')}")
+        print(f"  Описание: {t.get('description')}")
 
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+        # Достаем информацию о сумме
+        amount = t.get("operationAmount", {})
+        if amount:
+            print(f"  Сумма: {amount.get('amount')} {amount.get('currency', {}).get('name')}")
+else:
+    print("Не удалось загрузить транзакции")

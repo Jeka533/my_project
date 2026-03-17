@@ -22,12 +22,15 @@ def test_data() -> List[Dict[str, Any]]:
     ]
 
 
-@pytest.mark.parametrize("state, expected_count", [
-    ("EXECUTED", 2),
-    ("CANCELED", 2),
-    ("PENDING", 1),
-    ("NOT_EXIST", 0),
-])
+@pytest.mark.parametrize(
+    "state, expected_count",
+    [
+        ("EXECUTED", 2),
+        ("CANCELED", 2),
+        ("PENDING", 1),
+        ("NOT_EXIST", 0),
+    ],
+)
 def test_filter_by_state(test_data: List[Dict[str, Any]], state: str, expected_count: int) -> None:
     """Тест фильтрации по разным статусам"""
     result = filter_by_state(test_data, state)

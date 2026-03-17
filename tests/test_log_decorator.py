@@ -43,10 +43,11 @@ def test_log_to_console_error(capsys: pytest.CaptureFixture) -> None:
 def test_log_to_file_success() -> None:
     """Тест успешного выполнения с записью в файл."""
 
-    with tempfile.NamedTemporaryFile(mode='r+', delete=False) as tmp_file:
+    with tempfile.NamedTemporaryFile(mode="r+", delete=False) as tmp_file:
         filename = tmp_file.name
 
     try:
+
         @log(filename=filename)
         def multiply(a: int, b: int) -> int:
             return a * b
@@ -55,7 +56,7 @@ def test_log_to_file_success() -> None:
 
         assert result == 20
 
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, "r", encoding="utf-8") as f:
             content = f.read()
             assert content == "multiply ok\n"
 
@@ -66,10 +67,11 @@ def test_log_to_file_success() -> None:
 def test_log_to_file_error() -> None:
     """Тест ошибки выполнения с записью в файл."""
 
-    with tempfile.NamedTemporaryFile(mode='r+', delete=False) as tmp_file:
+    with tempfile.NamedTemporaryFile(mode="r+", delete=False) as tmp_file:
         filename = tmp_file.name
 
     try:
+
         @log(filename=filename)
         def get_item(lst: list, index: int) -> Any:
             return lst[index]
@@ -77,7 +79,7 @@ def test_log_to_file_error() -> None:
         with pytest.raises(IndexError):
             get_item([1, 2, 3], 5)
 
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, "r", encoding="utf-8") as f:
             content = f.read()
             assert content == "get_item error: IndexError. Inputs: ([1, 2, 3], 5), {}\n"
 

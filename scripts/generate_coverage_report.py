@@ -2,6 +2,7 @@
 """
 Скрипт для генерации отчета о покрытии кода тестами.
 """
+
 import os
 import shutil
 import subprocess
@@ -32,19 +33,24 @@ def generate_coverage_report() -> bool:
 
     # Установим необходимые пакеты
     print("\n 2. Проверка и установка необходимых пакетов...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "pytest-cov", "coverage"],
-                   capture_output=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "pytest-cov", "coverage"], capture_output=True)
 
     # Запустим тесты с измерением покрытия
     print("\n 3. Запуск тестов с измерением покрытия...")
-    result: subprocess.CompletedProcess = subprocess.run([
-        sys.executable, "-m", "pytest",
-        "--cov=src",
-        "--cov-report=term-missing",
-        "--cov-report=html:coverage_html",
-        "-v",
-        "tests/"
-    ], capture_output=True, text=True)
+    result: subprocess.CompletedProcess = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--cov=src",
+            "--cov-report=term-missing",
+            "--cov-report=html:coverage_html",
+            "-v",
+            "tests/",
+        ],
+        capture_output=True,
+        text=True,
+    )
 
     print("\n" + "=" * 40)
     print("Результаты тестов:")
@@ -60,9 +66,9 @@ def generate_coverage_report() -> bool:
         print("\n Файл с данными покрытия создан")
 
         # Покажем отчет о покрытии
-        cov_result: subprocess.CompletedProcess = subprocess.run([
-            sys.executable, "-m", "coverage", "report"
-        ], capture_output=True, text=True)
+        cov_result: subprocess.CompletedProcess = subprocess.run(
+            [sys.executable, "-m", "coverage", "report"], capture_output=True, text=True
+        )
 
         print("\n Отчет о покрытии:")
         print(cov_result.stdout)
@@ -70,7 +76,8 @@ def generate_coverage_report() -> bool:
         # Проверим процент покрытия
         if cov_result.stdout:
             import re
-            match: Optional[re.Match] = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', cov_result.stdout)
+
+            match: Optional[re.Match] = re.search(r"TOTAL\s+\d+\s+\d+\s+(\d+)%", cov_result.stdout)
             if match:
                 coverage_pct: int = int(match.group(1))
                 if coverage_pct >= 80:

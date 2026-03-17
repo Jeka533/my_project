@@ -21,7 +21,7 @@ def log(filename: Optional[str] = None) -> Callable:
             # Определяем куда писать логи
             output: TextIO
             if filename:
-                output = open(filename, 'a', encoding='utf-8')
+                output = open(filename, "a", encoding="utf-8")
             else:
                 output = sys.stdout
 

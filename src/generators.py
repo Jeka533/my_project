@@ -3,9 +3,7 @@
 from typing import Any, Dict, Iterator, List
 
 
-def filter_by_currency(
-    transactions: List[Dict[str, Any]], currency: str
-) -> Iterator[Dict[str, Any]]:
+def filter_by_currency(transactions: List[Dict[str, Any]], currency: str) -> Iterator[Dict[str, Any]]:
     """Фильтрует транзакции по заданной валюте."""
     for transaction in transactions:
         if (
@@ -16,9 +14,7 @@ def filter_by_currency(
             yield transaction
 
 
-def transaction_descriptions(
-    transactions: List[Dict[str, Any]]
-) -> Iterator[str]:
+def transaction_descriptions(transactions: List[Dict[str, Any]]) -> Iterator[str]:
     """Возвращает описания транзакций по очереди."""
     for transaction in transactions:
         yield transaction.get("description", "")
