@@ -1,24 +1,44 @@
-from scripts.utils import load_transactions
+import sys
+import os
 
-# Загружаем транзакции
-transactions = load_transactions("data/operations.json")
+# Добавляем путь к корню проекта
+sys.path.append(os.path.dirname(__file__))
 
-# Смотрим, что получилось
-if transactions:
-    print("\nПервые 3 транзакции:")
-    print("-" * 40)
+print("ЗАПУСК ПРИЛОЖЕНИЯ")
 
-    # Покажем первые 3 транзакции
-    for i in range(min(3, len(transactions))):
-        t = transactions[i]
-        print(f"\nТранзакция {i + 1}:")
-        print(f"  ID: {t.get('id')}")
-        print(f"  Дата: {t.get('date')}")
-        print(f"  Описание: {t.get('description')}")
+try:
+    from src.masks import get_mask_card_number, get_mask_account
+    print(" Модуль masks импортирован")
+except ImportError as e:
+    print(f" Ошибка импорта masks: {e}")
 
-        # Достаем информацию о сумме
-        amount = t.get("operationAmount", {})
-        if amount:
-            print(f"  Сумма: {amount.get('amount')} {amount.get('currency', {}).get('name')}")
+try:
+    from scripts.utils import load_transactions
+    print(" Модуль utils импортирован")
+except ImportError as e:
+    print(f" Ошибка импорта utils: {e}")
+
+# Тестируем функции
+print("ТЕСТИРОВАНИЕ")
+
+# Тест masks
+print("\n1. Тест маскировки карты:")
+result = get_mask_card_number("1234567890123456")
+print(f"   {result}")
+
+print("\n2. Тест маскировки счета:")
+result = get_mask_account("12345678900987654321")
+print(f"   {result}")
+
+# Тест utils
+print("\n3. Тест загрузки транзакций:")
+if os.path.exists("data/operations.json"):
+    transactions = load_transactions("data/operations.json")
+    print(f"   Загружено транзакций: {len(transactions)}")
 else:
-    print("Не удалось загрузить транзакции")
+    print("   Файл data/operations.json не найден")
+
+print("ПРОВЕРЬТЕ ПАПКУ logs/")
+print("Должны быть файлы:")
+print("  - logs/masks.log")
+print("  - logs/utils.log")
