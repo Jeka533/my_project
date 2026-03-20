@@ -1,16 +1,44 @@
-# This is a sample Python script.
+import sys
+import os
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# Добавляем путь к корню проекта
+sys.path.append(os.path.dirname(__file__))
 
+print("ЗАПУСК ПРИЛОЖЕНИЯ")
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+try:
+    from src.masks import get_mask_card_number, get_mask_account
+    print(" Модуль masks импортирован")
+except ImportError as e:
+    print(f" Ошибка импорта masks: {e}")
 
+try:
+    from scripts.utils import load_transactions
+    print(" Модуль utils импортирован")
+except ImportError as e:
+    print(f" Ошибка импорта utils: {e}")
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+# Тестируем функции
+print("ТЕСТИРОВАНИЕ")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+# Тест masks
+print("\n1. Тест маскировки карты:")
+result = get_mask_card_number("1234567890123456")
+print(f"   {result}")
+
+print("\n2. Тест маскировки счета:")
+result = get_mask_account("12345678900987654321")
+print(f"   {result}")
+
+# Тест utils
+print("\n3. Тест загрузки транзакций:")
+if os.path.exists("data/operations.json"):
+    transactions = load_transactions("data/operations.json")
+    print(f"   Загружено транзакций: {len(transactions)}")
+else:
+    print("   Файл data/operations.json не найден")
+
+print("ПРОВЕРЬТЕ ПАПКУ logs/")
+print("Должны быть файлы:")
+print("  - logs/masks.log")
+print("  - logs/utils.log")
