@@ -1,11 +1,14 @@
 """
 Модуль для маскирования конфиденциальных данных.
 """
+import logging
 
 from logger_setup import setup_logger
 
 # Настройка логгера для модуля masks
 logger = setup_logger(__name__, "masks.log")
+
+logger.setLevel(logging.DEBUG)
 
 
 def get_mask_card_number(card_number: str) -> str:

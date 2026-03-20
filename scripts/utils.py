@@ -3,6 +3,7 @@
 """
 
 import json
+import logging
 import os
 from typing import Any, Dict, List
 
@@ -11,6 +12,7 @@ from logger_setup import setup_logger
 # Настройка логгера для модуля utils
 logger = setup_logger(__name__, "utils.log")
 
+logger.setLevel(logging.DEBUG)
 
 def load_transactions(file_path: str) -> List[Dict[str, Any]]:
     """

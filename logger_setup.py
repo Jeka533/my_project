@@ -7,7 +7,7 @@ import os
 from typing import Union
 
 
-def setup_logger(name: str, log_file: str, level: Union[int, str] = logging.INFO) -> logging.Logger:
+def setup_logger(name: str, log_file: str, level: Union[int, str] = logging.DEBUG) -> logging.Logger:
     """
     Настраивает и возвращает логгер для конкретного модуля.
 
