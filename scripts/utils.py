@@ -14,6 +14,7 @@ logger = setup_logger(__name__, "utils.log")
 
 logger.setLevel(logging.DEBUG)
 
+
 def load_transactions(file_path: str) -> List[Dict[str, Any]]:
     """
     Загружает транзакции из JSON-файла.

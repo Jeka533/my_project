@@ -2,11 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-
-from scripts.external_api import (
-    convert_currency,
-    get_amount_in_rub,
-)
+from scripts.external_api import convert_currency, get_amount_in_rub
 
 
 @patch("scripts.external_api.requests.get")

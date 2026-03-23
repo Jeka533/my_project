@@ -1,7 +1,7 @@
 """Модуль для конвертации валют через внешнее API."""
 
 import os
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 import requests
 from dotenv import load_dotenv

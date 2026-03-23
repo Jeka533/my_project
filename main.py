@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 # Добавляем путь к корню проекта
 sys.path.append(os.path.dirname(__file__))
@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(__file__))
 print("ЗАПУСК ПРИЛОЖЕНИЯ")
 
 try:
-    from src.masks import get_mask_card_number, get_mask_account
+    from src.masks import get_mask_account, get_mask_card_number
     print(" Модуль masks импортирован")
 except ImportError as e:
     print(f" Ошибка импорта masks: {e}")
