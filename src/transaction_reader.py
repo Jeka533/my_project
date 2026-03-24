@@ -3,201 +3,142 @@
 """
 
 import csv
+import re
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Dict, List, Union
 
 
+def get_data_path(filename: str) -> Path:
+    """Возвращает путь к файлу в папке data."""
+    return Path(__file__).parent.parent / "data" / filename
+
+
 def read_csv_transactions(file_path: Union[str, Path]) -> List[Dict]:
-    """
-    Читает транзакции из CSV файла.
-
-    Параметры:
-    file_path (str, Path): путь к CSV файлу
-
-    Возвращает:
-    list: список словарей с транзакциями
-    """
+    """Читает транзакции из CSV файла."""
     transactions: List[Dict] = []
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        return []
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            delimiter = ';' if ';' in f.readline() else ','
+            f.seek(0)
+            reader = csv.DictReader(f, delimiter=delimiter)
 
-            if not reader.fieldnames:
-                print(f"Ошибка: файл {file_path} не содержит заголовков")
-                return []
-
-            for row_num, row in enumerate(reader, start=2):
+            for row in reader:
                 try:
-                    if not any(row.values()):
-                        continue
-
-                    transaction: Dict = {}
-
-                    # Дата
-                    if 'date' in row and row['date']:
-                        try:
-                            transaction['date'] = datetime.strptime(
-                                row['date'].strip(), '%Y-%m-%d'
-                            )
-                        except ValueError:
-                            print(f"Ошибка в строке {row_num}: "
-                                  f"неверный формат даты '{row['date']}'")
-                            continue
-                    else:
-                        print(f"Ошибка в строке {row_num}: отсутствует дата")
-                        continue
-
-                    # Сумма
-                    if 'amount' in row and row['amount']:
-                        try:
-                            amount_str = row['amount'].strip().replace(',', '.')
-                            transaction['amount'] = Decimal(amount_str)
-                        except Exception:
-                            print(f"Ошибка в строке {row_num}: "
-                                  f"неверный формат суммы '{row['amount']}'")
-                            continue
-                    else:
-                        print(f"Ошибка в строке {row_num}: отсутствует сумма")
-                        continue
-
-                    # Описание
-                    if 'description' in row:
-                        transaction['description'] = row['description'].strip()
-                    else:
-                        transaction['description'] = ''
-
-                    # Категория (опционально)
+                    date_str = row.get('date', '').strip()
+                    amount_str = row.get('amount', '').strip().replace(',', '.')
+                    description = row.get('description', '').strip()
                     category = row.get('category', '').strip()
-                    transaction['category'] = category if category else None
+                    trans_id = row.get('transaction_id', '').strip()
 
-                    # ID транзакции (опционально)
-                    transaction_id = row.get('transaction_id', '').strip()
-                    transaction['transaction_id'] = transaction_id if transaction_id else None
+                    if not date_str or not amount_str:
+                        continue
 
-                    transactions.append(transaction)
+                    date_str = date_str.replace('Z', '+00:00')
+                    try:
+                        date = datetime.fromisoformat(date_str)
+                    except ValueError:
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
 
-                except Exception as e:
-                    print(f"Ошибка при обработке строки {row_num}: {e}")
+                    amount_str = re.sub(r'[^\d.-]', '', amount_str)
+                    if not amount_str:
+                        continue
+
+                    amount = Decimal(amount_str)
+
+                    transactions.append({
+                        'date': date,
+                        'amount': amount,
+                        'description': description,
+                        'category': category if category else None,
+                        'transaction_id': trans_id if trans_id else None,
+                    })
+
+                except (ValueError, KeyError):
                     continue
 
-        print(f"Успешно прочитано {len(transactions)} транзакций из {file_path}")
         return transactions
 
-    except FileNotFoundError:
-        print(f"Ошибка: файл {file_path} не найден")
-        return []
-    except Exception as e:
-        print(f"Ошибка при чтении файла {file_path}: {e}")
+    except (FileNotFoundError, PermissionError):
         return []
 
 
 def read_excel_transactions(file_path: Union[str, Path]) -> List[Dict]:
-    """
-    Читает транзакции из Excel файла.
-
-    Параметры:
-    file_path (str, Path): путь к Excel файлу
-
-    Возвращает:
-    list: список словарей с транзакциями
-    """
+    """Читает транзакции из Excel файла."""
     transactions: List[Dict] = []
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        return []
 
     try:
-        try:
-            import pandas as pd
-        except ImportError:
-            print("Ошибка: для чтения Excel файлов необходим модуль pandas")
-            print("Установите его командой: pip install pandas openpyxl")
-            return []
+        import pandas as pd
 
         df = pd.read_excel(file_path)
 
-        if df.empty:
-            print(f"Файл {file_path} пуст")
+        required = ['date', 'amount', 'description']
+        if not all(col in df.columns for col in required):
             return []
 
-        required_columns = ['date', 'amount', 'description']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-
-        if missing_columns:
-            print(f"Ошибка: в файле отсутствуют обязательные колонки: {missing_columns}")
-            print(f"Доступные колонки: {list(df.columns)}")
-            return []
-
-        for idx, row in df.iterrows():
+        for _, row in df.iterrows():
             try:
-                transaction: Dict = {}
+                date_val = row['date']
+                amount_val = row['amount']
+                description = str(row['description']).strip() if pd.notna(row['description']) else ''
 
-                # Дата
-                if pd.notna(row['date']):
-                    if isinstance(row['date'], (datetime, pd.Timestamp)):
-                        transaction['date'] = row['date']
-                    else:
-                        try:
-                            transaction['date'] = datetime.strptime(
-                                str(row['date']), '%Y-%m-%d'
-                            )
-                        except Exception:
-                            try:
-                                transaction['date'] = pd.to_datetime(row['date'])
-                            except Exception:
-                                print(f"Ошибка в строке {idx + 2}: "
-                                      f"неверный формат даты '{row['date']}'")
-                                continue
-                else:
-                    print(f"Ошибка в строке {idx + 2}: отсутствует дата")
+                if pd.isna(date_val) or pd.isna(amount_val):
                     continue
 
-                # Сумма
-                if pd.notna(row['amount']):
+                if isinstance(date_val, (datetime, pd.Timestamp)):
+                    date = date_val
+                else:
+                    date_str = str(date_val).strip().replace('Z', '+00:00')
                     try:
-                        if isinstance(row['amount'], (int, float)):
-                            transaction['amount'] = Decimal(str(row['amount']))
-                        else:
-                            amount_str = str(row['amount']).strip().replace(',', '.')
-                            transaction['amount'] = Decimal(amount_str)
-                    except Exception:
-                        print(f"Ошибка в строке {idx + 2}: "
-                              f"неверный формат суммы '{row['amount']}'")
+                        date = datetime.fromisoformat(date_str)
+                    except ValueError:
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
+
+                if isinstance(amount_val, (int, float)):
+                    amount = Decimal(str(amount_val))
+                else:
+                    amount_str = str(amount_val).strip().replace(',', '.')
+                    amount_str = re.sub(r'[^\d.-]', '', amount_str)
+                    if not amount_str:
                         continue
-                else:
-                    print(f"Ошибка в строке {idx + 2}: отсутствует сумма")
-                    continue
+                    amount = Decimal(amount_str)
 
-                # Описание
-                if pd.notna(row['description']):
-                    transaction['description'] = str(row['description']).strip()
-                else:
-                    transaction['description'] = ''
-
-                # Категория (опционально)
+                category = None
                 if 'category' in df.columns and pd.notna(row['category']):
-                    transaction['category'] = str(row['category']).strip()
-                else:
-                    transaction['category'] = None
+                    cat_val = str(row['category']).strip()
+                    if cat_val not in ('nan', 'None', ''):
+                        category = cat_val
 
-                # ID транзакции (опционально)
+                trans_id = None
                 if 'transaction_id' in df.columns and pd.notna(row['transaction_id']):
-                    transaction['transaction_id'] = str(row['transaction_id']).strip()
-                else:
-                    transaction['transaction_id'] = None
+                    tid_val = str(row['transaction_id']).strip()
+                    if tid_val not in ('nan', 'None', ''):
+                        trans_id = tid_val
 
-                transactions.append(transaction)
+                transactions.append({
+                    'date': date,
+                    'amount': amount,
+                    'description': description,
+                    'category': category,
+                    'transaction_id': trans_id,
+                })
 
-            except Exception as e:
-                print(f"Ошибка при обработке строки {idx + 2}: {e}")
+            except (ValueError, KeyError):
                 continue
 
-        print(f"Успешно прочитано {len(transactions)} транзакций из {file_path}")
         return transactions
 
-    except FileNotFoundError:
-        print(f"Ошибка: файл {file_path} не найден")
+    except ImportError:
         return []
-    except Exception as e:
-        print(f"Ошибка при чтении файла {file_path}: {e}")
+    except (FileNotFoundError, PermissionError):
         return []
