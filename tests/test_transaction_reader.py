@@ -1,114 +1,263 @@
-"""Тесты для чтения транзакций."""
+"""
+Тесты для модуля чтения транзакций.
+"""
 
 import csv
 import tempfile
+import unittest
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Generator
+from typing import Any, List, Optional
 
-import pytest
-
-from src.transaction_reader import CSVTransactionReader, ExcelTransactionReader, read_transactions
+from src.transaction_reader import read_csv_transactions, read_excel_transactions
 
 
-class TestCSVTransactionReader:
-    """Тесты CSV читателя."""
+class TestReadCSVTransactions(unittest.TestCase):
+    """Тесты для функции read_csv_transactions."""
 
-    @pytest.fixture
-    def csv_file(self) -> Generator[Path, None, None]:
-        """Создает временный CSV файл."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False, encoding="utf-8"
-        ) as f:
+    def setUp(self) -> None:
+        """Создание временного CSV файла для тестов."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.csv_file = Path(self.temp_dir) / "test_transactions.csv"
+
+    def create_csv_file(
+        self,
+        rows: List[List[str]],
+        headers: Optional[List[str]] = None
+    ) -> None:
+        """Вспомогательная функция для создания CSV файла."""
+        if headers is None:
+            headers = ['date', 'amount', 'description', 'category', 'transaction_id']
+
+        with open(self.csv_file, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(["date", "amount", "description", "category"])
-            writer.writerow(["2024-01-15", "100.50", "Зарплата", "Доход"])
-            writer.writerow(["2024-01-16", "-25.75", "Кофе", "Еда"])
-            path = Path(f.name)
+            writer.writerow(headers)
+            for row in rows:
+                writer.writerow(row)
 
-        yield path
-        path.unlink()
+    def test_read_valid_csv(self) -> None:
+        """Тест чтения корректного CSV файла."""
+        rows = [
+            ['2024-01-15', '1500.50', 'Покупка продуктов', 'Еда', 'TXN001'],
+            ['2024-01-16', '500.00', 'Транспорт', 'Транспорт', 'TXN002'],
+        ]
+        self.create_csv_file(rows)
 
-    def test_read(self, csv_file: Path) -> None:
-        """Тест чтения CSV."""
-        reader = CSVTransactionReader(csv_file)
-        transactions = reader.read()
+        transactions = read_csv_transactions(self.csv_file)
 
-        assert len(transactions) == 2
-        assert transactions[0].date == datetime(2024, 1, 15)
-        assert transactions[0].amount == Decimal("100.50")
-        assert transactions[0].description == "Зарплата"
-        assert transactions[0].category == "Доход"
+        self.assertEqual(len(transactions), 2)
+        self.assertEqual(transactions[0]['date'], datetime(2024, 1, 15))
+        self.assertEqual(transactions[0]['amount'], Decimal('1500.50'))
+        self.assertEqual(transactions[0]['description'], 'Покупка продуктов')
+        self.assertEqual(transactions[0]['category'], 'Еда')
+        self.assertEqual(transactions[0]['transaction_id'], 'TXN001')
+
+    def test_read_csv_with_comma_in_amount(self) -> None:
+        """Тест чтения CSV с запятой в сумме."""
+        rows = [
+            ['2024-01-15', '1500,50', 'Покупка', 'Еда', 'TXN001'],
+        ]
+        self.create_csv_file(rows)
+
+        transactions = read_csv_transactions(self.csv_file)
+
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(transactions[0]['amount'], Decimal('1500.50'))
+
+    def test_read_csv_missing_optional_fields(self) -> None:
+        """Тест чтения CSV без опциональных полей."""
+        rows = [
+            ['2024-01-15', '1500.50', 'Покупка', '', ''],
+        ]
+        self.create_csv_file(rows)
+
+        transactions = read_csv_transactions(self.csv_file)
+
+        self.assertEqual(len(transactions), 1)
+        self.assertIsNone(transactions[0]['category'])
+        self.assertIsNone(transactions[0]['transaction_id'])
+
+    def test_read_csv_missing_required_fields(self) -> None:
+        """Тест чтения CSV с отсутствием обязательных полей."""
+        rows = [
+            ['', '1500.50', 'Покупка', 'Еда', 'TXN001'],
+        ]
+        self.create_csv_file(rows)
+
+        transactions = read_csv_transactions(self.csv_file)
+
+        self.assertEqual(len(transactions), 0)
+
+    def test_read_csv_invalid_date(self) -> None:
+        """Тест чтения CSV с неверным форматом даты."""
+        rows = [
+            ['2024/01/15', '1500.50', 'Покупка', 'Еда', 'TXN001'],
+        ]
+        self.create_csv_file(rows)
+
+        transactions = read_csv_transactions(self.csv_file)
+
+        self.assertEqual(len(transactions), 0)
+
+    def test_read_csv_invalid_amount(self) -> None:
+        """Тест чтения CSV с неверным форматом суммы."""
+        rows = [
+            ['2024-01-15', 'abc', 'Покупка', 'Еда', 'TXN001'],
+        ]
+        self.create_csv_file(rows)
+
+        transactions = read_csv_transactions(self.csv_file)
+
+        self.assertEqual(len(transactions), 0)
+
+    def test_read_csv_empty_file(self) -> None:
+        """Тест чтения пустого CSV файла."""
+        with open(self.csv_file, 'w', encoding='utf-8') as f:
+            f.write('')
+
+        transactions = read_csv_transactions(self.csv_file)
+
+        self.assertEqual(len(transactions), 0)
+
+    def test_read_csv_file_not_found(self) -> None:
+        """Тест чтения несуществующего файла."""
+        transactions = read_csv_transactions("non_existent_file.csv")
+
+        self.assertEqual(len(transactions), 0)
+
+    def tearDown(self) -> None:
+        """Очистка временных файлов."""
+        if self.csv_file.exists():
+            self.csv_file.unlink()
+        if Path(self.temp_dir).exists():
+            Path(self.temp_dir).rmdir()
 
 
-class TestExcelTransactionReader:
-    """Тесты Excel читателя."""
+class TestReadExcelTransactions(unittest.TestCase):
+    """Тесты для функции read_excel_transactions."""
 
-    @pytest.fixture
-    def excel_file(self) -> Generator[Path, None, None]:
-        """Создает временный Excel файл."""
-        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
-            path = Path(f.name)
-
+    def setUp(self) -> None:
+        """Создание временного Excel файла для тестов."""
         try:
-            from openpyxl import Workbook  # type: ignore
+            import pandas as pd
+            self.pd = pd
         except ImportError:
-            pytest.skip("openpyxl не установлен")
-            return path
+            self.pd = None
+            self.skipTest("pandas не установлен, пропускаем тесты Excel")
 
-        wb = Workbook()
-        ws = wb.active
-        ws["A1"] = "date"
-        ws["B1"] = "amount"
-        ws["C1"] = "description"
-        ws["D1"] = "category"
-        ws["A2"] = "2024-01-15"
-        ws["B2"] = 100.50
-        ws["C2"] = "Зарплата"
-        ws["D2"] = "Доход"
-        ws["A3"] = "2024-01-16"
-        ws["B3"] = -25.75
-        ws["C3"] = "Кофе"
-        ws["D3"] = "Еда"
+        self.temp_dir = tempfile.mkdtemp()
+        self.excel_file = Path(self.temp_dir) / "test_transactions.xlsx"
 
-        wb.save(path)
-        wb.close()
+    def create_excel_file(
+        self,
+        data: List[List[Any]],
+        columns: Optional[List[str]] = None
+    ) -> None:
+        """Вспомогательная функция для создания Excel файла."""
+        if self.pd is None:
+            self.skipTest("pandas не установлен")
 
-        yield path
-        path.unlink()
+        if columns is None:
+            columns = ['date', 'amount', 'description', 'category', 'transaction_id']
 
-    def test_read(self, excel_file: Path) -> None:
-        """Тест чтения Excel."""
-        reader = ExcelTransactionReader(excel_file)
-        transactions = reader.read()
+        df = self.pd.DataFrame(data, columns=columns)
+        df.to_excel(self.excel_file, index=False)
 
-        assert len(transactions) == 2
-        assert transactions[0].date == datetime(2024, 1, 15)
-        assert transactions[0].amount == Decimal("100.50")
-        assert transactions[0].description == "Зарплата"
-        assert transactions[0].category == "Доход"
+    def test_read_valid_excel(self) -> None:
+        """Тест чтения корректного Excel файла."""
+        if self.pd is None:
+            self.skipTest("pandas не установлен")
+
+        data: List[List[Any]] = [
+            ['2024-01-15', 1500.50, 'Покупка продуктов', 'Еда', 'TXN001'],
+            ['2024-01-16', 500.00, 'Транспорт', 'Транспорт', 'TXN002'],
+        ]
+        self.create_excel_file(data)
+
+        transactions = read_excel_transactions(self.excel_file)
+
+        self.assertEqual(len(transactions), 2)
+        if transactions[0]['date']:
+            self.assertEqual(
+                transactions[0]['date'].strftime('%Y-%m-%d'),
+                '2024-01-15'
+            )
+        self.assertEqual(transactions[0]['amount'], Decimal('1500.50'))
+        self.assertEqual(transactions[0]['description'], 'Покупка продуктов')
+        self.assertEqual(transactions[0]['category'], 'Еда')
+        self.assertEqual(transactions[0]['transaction_id'], 'TXN001')
+
+    def test_read_excel_with_date_object(self) -> None:
+        """Тест чтения Excel с объектом даты."""
+        if self.pd is None:
+            self.skipTest("pandas не установлен")
+
+        data: List[List[Any]] = [
+            [datetime(2024, 1, 15), 1500.50, 'Покупка', 'Еда', 'TXN001'],
+        ]
+        self.create_excel_file(data)
+
+        transactions = read_excel_transactions(self.excel_file)
+
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(transactions[0]['date'], datetime(2024, 1, 15))
+
+    def test_read_excel_missing_optional_fields(self) -> None:
+        """Тест чтения Excel без опциональных полей."""
+        if self.pd is None:
+            self.skipTest("pandas не установлен")
+
+        data: List[List[Any]] = [
+            ['2024-01-15', 1500.50, 'Покупка', None, None],
+        ]
+        self.create_excel_file(data)
+
+        transactions = read_excel_transactions(self.excel_file)
+
+        self.assertEqual(len(transactions), 1)
+        self.assertIsNone(transactions[0]['category'])
+        self.assertIsNone(transactions[0]['transaction_id'])
+
+    def test_read_excel_missing_required_columns(self) -> None:
+        """Тест чтения Excel с отсутствием обязательных колонок."""
+        if self.pd is None:
+            self.skipTest("pandas не установлен")
+
+        data: List[List[Any]] = [
+            ['2024-01-15', 1500.50, 'Покупка'],
+        ]
+        self.create_excel_file(data, columns=['date', 'amount', 'category'])
+
+        transactions = read_excel_transactions(self.excel_file)
+
+        self.assertEqual(len(transactions), 0)
+
+    def test_read_excel_empty_file(self) -> None:
+        """Тест чтения пустого Excel файла."""
+        if self.pd is None:
+            self.skipTest("pandas не установлен")
+
+        df = self.pd.DataFrame()
+        df.to_excel(self.excel_file, index=False)
+
+        transactions = read_excel_transactions(self.excel_file)
+
+        self.assertEqual(len(transactions), 0)
+
+    def test_read_excel_file_not_found(self) -> None:
+        """Тест чтения несуществующего файла."""
+        transactions = read_excel_transactions("non_existent_file.xlsx")
+
+        self.assertEqual(len(transactions), 0)
+
+    def tearDown(self) -> None:
+        """Очистка временных файлов."""
+        if hasattr(self, 'excel_file') and self.excel_file.exists():
+            self.excel_file.unlink()
+        if hasattr(self, 'temp_dir') and Path(self.temp_dir).exists():
+            Path(self.temp_dir).rmdir()
 
 
-class TestReadTransactions:
-    """Тесты универсальной функции."""
-
-    @pytest.fixture
-    def csv_file(self) -> Generator[Path, None, None]:
-        """Создает временный CSV файл."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False, encoding="utf-8"
-        ) as f:
-            writer = csv.writer(f)
-            writer.writerow(["date", "amount", "description"])
-            writer.writerow(["2024-01-15", "100", "Тест"])
-            path = Path(f.name)
-
-        yield path
-        path.unlink()
-
-    def test_read_csv(self, csv_file: Path) -> None:
-        """Тест автоматического определения CSV."""
-        transactions = read_transactions(csv_file)
-        assert len(transactions) == 1
-        assert transactions[0].amount == Decimal("100")
+if __name__ == "__main__":
+    unittest.main()
