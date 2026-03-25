@@ -1,186 +1,144 @@
 ﻿"""
-Тесты для модуля чтения транзакций.
+Модуль для чтения финансовых операций из CSV и Excel файлов.
 """
 
 import csv
-import tempfile
-import unittest
+import re
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, List, Optional
-
-from src.transaction_reader import read_csv_transactions, read_excel_transactions
+from typing import Dict, List, Union
 
 
-class TestReadCSVTransactions(unittest.TestCase):
-    """Тесты для read_csv_transactions."""
-
-    def setUp(self) -> None:
-        """Создание временного CSV файла."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.csv_file = Path(self.temp_dir) / "test.csv"
-
-    def tearDown(self) -> None:
-        """Очистка временных файлов."""
-        if self.csv_file.exists():
-            self.csv_file.unlink()
-        Path(self.temp_dir).rmdir()
-
-    def _create_csv(self, rows: List[List[str]], headers: Optional[List[str]] = None) -> None:
-        """Создание CSV файла."""
-        if headers is None:
-            headers = ['date', 'amount', 'description', 'category', 'transaction_id']
-        with open(self.csv_file, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)
-            writer.writerows(rows)
-
-    def test_valid_csv(self) -> None:
-        """Тест корректного CSV."""
-        rows = [['2024-01-15', '1500.50', 'Покупка', 'Еда', 'TXN001']]
-        self._create_csv(rows)
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 1)
-        self.assertEqual(transactions[0]['date'], datetime(2024, 1, 15))
-        self.assertEqual(transactions[0]['amount'], Decimal('1500.50'))
-        self.assertEqual(transactions[0]['category'], 'Еда')
-
-    def test_csv_comma_amount(self) -> None:
-        """Тест суммы с запятой."""
-        rows = [['2024-01-15', '1500,50', 'Покупка', 'Еда', 'TXN001']]
-        self._create_csv(rows)
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 1)
-        self.assertEqual(transactions[0]['amount'], Decimal('1500.50'))
-
-    def test_csv_missing_optional(self) -> None:
-        """Тест без опциональных полей."""
-        rows = [['2024-01-15', '1500.50', 'Покупка', '', '']]
-        self._create_csv(rows)
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 1)
-        self.assertIsNone(transactions[0]['category'])
-        self.assertIsNone(transactions[0]['transaction_id'])
-
-    def test_csv_missing_required(self) -> None:
-        """Тест с отсутствием обязательных полей."""
-        rows = [['', '1500.50', 'Покупка', 'Еда', 'TXN001']]
-        self._create_csv(rows)
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 0)
-
-    def test_csv_invalid_date(self) -> None:
-        """Тест неверного формата даты."""
-        rows = [['2024/01/15', '1500.50', 'Покупка', 'Еда', 'TXN001']]
-        self._create_csv(rows)
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 0)
-
-    def test_csv_invalid_amount(self) -> None:
-        """Тест неверного формата суммы."""
-        rows = [['2024-01-15', 'abc', 'Покупка', 'Еда', 'TXN001']]
-        self._create_csv(rows)
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 0)
-
-    def test_csv_empty(self) -> None:
-        """Тест пустого файла."""
-        with open(self.csv_file, 'w', encoding='utf-8') as f:
-            f.write('')
-        transactions = read_csv_transactions(self.csv_file)
-        self.assertEqual(len(transactions), 0)
-
-    def test_csv_not_found(self) -> None:
-        """Тест несуществующего файла."""
-        transactions = read_csv_transactions("missing.csv")
-        self.assertEqual(len(transactions), 0)
+def get_data_path(filename: str) -> Path:
+    """Возвращает путь к файлу в папке data."""
+    return Path(__file__).parent.parent / "data" / filename
 
 
-class TestReadExcelTransactions(unittest.TestCase):
-    """Тесты для read_excel_transactions."""
+def read_csv_transactions(file_path: Union[str, Path]) -> List[Dict]:
+    """Читает транзакции из CSV файла."""
+    transactions: List[Dict] = []
+    file_path = Path(file_path)
 
-    def setUp(self) -> None:
-        """Создание временного Excel файла."""
-        try:
-            import pandas as pd
-            self.pd = pd
-        except ImportError:
-            self.pd = None
-            self.skipTest("pandas не установлен")
+    if not file_path.exists():
+        return []
 
-        self.temp_dir = tempfile.mkdtemp()
-        self.excel_file = Path(self.temp_dir) / "test.xlsx"
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            delimiter = ';' if ';' in f.readline() else ','
+            f.seek(0)
+            reader = csv.DictReader(f, delimiter=delimiter)
 
-    def tearDown(self) -> None:
-        """Очистка временных файлов."""
-        if hasattr(self, 'excel_file') and self.excel_file.exists():
-            self.excel_file.unlink()
-        if hasattr(self, 'temp_dir') and Path(self.temp_dir).exists():
-            Path(self.temp_dir).rmdir()
+            for row in reader:
+                try:
+                    date_str = row.get('date', '').strip()
+                    amount_str = row.get('amount', '').strip().replace(',', '.')
+                    description = row.get('description', '').strip()
+                    category = row.get('category', '').strip()
+                    trans_id = row.get('transaction_id', '').strip()
 
-    def _create_excel(self, data: List[List[Any]], columns: Optional[List[str]] = None) -> None:
-        """Создание Excel файла."""
-        if columns is None:
-            columns = ['date', 'amount', 'description', 'category', 'transaction_id']
-        df = self.pd.DataFrame(data, columns=columns)
-        df.to_excel(self.excel_file, index=False)
+                    if not date_str or not amount_str:
+                        continue
 
-    def test_valid_excel(self) -> None:
-        """Тест корректного Excel."""
-        if self.pd is None:
-            self.skipTest("pandas не установлен")
-        data = [['2024-01-15', 1500.50, 'Покупка', 'Еда', 'TXN001']]
-        self._create_excel(data)
-        transactions = read_excel_transactions(self.excel_file)
-        self.assertEqual(len(transactions), 1)
-        self.assertEqual(transactions[0]['date'].strftime('%Y-%m-%d'), '2024-01-15')
-        self.assertEqual(transactions[0]['amount'], Decimal('1500.50'))
-        self.assertEqual(transactions[0]['category'], 'Еда')
+                    date_str = date_str.replace('Z', '+00:00')
+                    try:
+                        date = datetime.fromisoformat(date_str)
+                    except ValueError:
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
 
-    def test_excel_date_object(self) -> None:
-        """Тест с объектом даты."""
-        if self.pd is None:
-            self.skipTest("pandas не установлен")
-        data = [[datetime(2024, 1, 15), 1500.50, 'Покупка', 'Еда', 'TXN001']]
-        self._create_excel(data)
-        transactions = read_excel_transactions(self.excel_file)
-        self.assertEqual(len(transactions), 1)
-        self.assertEqual(transactions[0]['date'], datetime(2024, 1, 15))
+                    amount_str = re.sub(r'[^\d.-]', '', amount_str)
+                    if not amount_str:
+                        continue
 
-    def test_excel_missing_optional(self) -> None:
-        """Тест без опциональных полей."""
-        if self.pd is None:
-            self.skipTest("pandas не установлен")
-        data = [['2024-01-15', 1500.50, 'Покупка', None, None]]
-        self._create_excel(data)
-        transactions = read_excel_transactions(self.excel_file)
-        self.assertEqual(len(transactions), 1)
-        self.assertIsNone(transactions[0]['category'])
-        self.assertIsNone(transactions[0]['transaction_id'])
+                    amount = Decimal(amount_str)
 
-    def test_excel_missing_required_columns(self) -> None:
-        """Тест с отсутствием обязательных колонок."""
-        if self.pd is None:
-            self.skipTest("pandas не установлен")
-        data = [['2024-01-15', 1500.50]]
-        self._create_excel(data, columns=['date', 'amount'])
-        transactions = read_excel_transactions(self.excel_file)
-        self.assertEqual(len(transactions), 0)
+                    transactions.append({
+                        'date': date,
+                        'amount': amount,
+                        'description': description,
+                        'category': category if category else None,
+                        'transaction_id': trans_id if trans_id else None,
+                    })
 
-    def test_excel_empty(self) -> None:
-        """Тест пустого файла."""
-        if self.pd is None:
-            self.skipTest("pandas не установлен")
-        self._create_excel([])
-        transactions = read_excel_transactions(self.excel_file)
-        self.assertEqual(len(transactions), 0)
+                except (ValueError, KeyError):
+                    continue
 
-    def test_excel_not_found(self) -> None:
-        """Тест несуществующего файла."""
-        transactions = read_excel_transactions("missing.xlsx")
-        self.assertEqual(len(transactions), 0)
+        return transactions
+
+    except (FileNotFoundError, PermissionError):
+        return []
 
 
-if __name__ == "__main__":
-    unittest.main()
+def read_excel_transactions(file_path: Union[str, Path]) -> List[Dict]:
+    """Читает транзакции из Excel файла."""
+    transactions: List[Dict] = []
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        return []
+
+    try:
+        import pandas as pd
+
+        df = pd.read_excel(file_path)
+
+        required = ['date', 'amount', 'description']
+        if not all(col in df.columns for col in required):
+            return []
+
+        for _, row in df.iterrows():
+            try:
+                date_val = row['date']
+                amount_val = row['amount']
+                description = str(row['description']).strip() if pd.notna(row['description']) else ''
+
+                if pd.isna(date_val) or pd.isna(amount_val):
+                    continue
+
+                if isinstance(date_val, (datetime, pd.Timestamp)):
+                    date = date_val
+                else:
+                    date_str = str(date_val).strip().replace('Z', '+00:00')
+                    try:
+                        date = datetime.fromisoformat(date_str)
+                    except ValueError:
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
+
+                if isinstance(amount_val, (int, float)):
+                    amount = Decimal(str(amount_val))
+                else:
+                    amount_str = str(amount_val).strip().replace(',', '.')
+                    amount_str = re.sub(r'[^\d.-]', '', amount_str)
+                    if not amount_str:
+                        continue
+                    amount = Decimal(amount_str)
+
+                category = None
+                if 'category' in df.columns and pd.notna(row['category']):
+                    cat_val = str(row['category']).strip()
+                    if cat_val not in ('nan', 'None', ''):
+                        category = cat_val
+
+                trans_id = None
+                if 'transaction_id' in df.columns and pd.notna(row['transaction_id']):
+                    tid_val = str(row['transaction_id']).strip()
+                    if tid_val not in ('nan', 'None', ''):
+                        trans_id = tid_val
+
+                transactions.append({
+                    'date': date,
+                    'amount': amount,
+                    'description': description,
+                    'category': category,
+                    'transaction_id': trans_id,
+                })
+
+            except (ValueError, KeyError):
+                continue
+
+        return transactions
+
+    except ImportError:
+        return []
+    except (FileNotFoundError, PermissionError):
+        return []

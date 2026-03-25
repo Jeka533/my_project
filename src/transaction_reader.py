@@ -16,7 +16,10 @@ def get_data_path(filename: str) -> Path:
 
 
 def read_csv_transactions(file_path: Union[str, Path]) -> List[Dict]:
-    """Читает транзакции из CSV файла."""
+    """
+    Читает транзакции из CSV файла.
+    Сохраняет ВСЕ поля из исходной строки.
+    """
     transactions: List[Dict] = []
     file_path = Path(file_path)
 
@@ -31,13 +34,9 @@ def read_csv_transactions(file_path: Union[str, Path]) -> List[Dict]:
 
             for row in reader:
                 try:
+                    # Парсим дату
                     date_str = row.get('date', '').strip()
-                    amount_str = row.get('amount', '').strip().replace(',', '.')
-                    description = row.get('description', '').strip()
-                    category = row.get('category', '').strip()
-                    trans_id = row.get('transaction_id', '').strip()
-
-                    if not date_str or not amount_str:
+                    if not date_str:
                         continue
 
                     date_str = date_str.replace('Z', '+00:00')
@@ -46,19 +45,31 @@ def read_csv_transactions(file_path: Union[str, Path]) -> List[Dict]:
                     except ValueError:
                         date = datetime.strptime(date_str, '%Y-%m-%d')
 
+                    # Парсим сумму
+                    amount_str = row.get('amount', '').strip().replace(',', '.')
+                    if not amount_str:
+                        continue
+
                     amount_str = re.sub(r'[^\d.-]', '', amount_str)
                     if not amount_str:
                         continue
 
                     amount = Decimal(amount_str)
 
-                    transactions.append({
+                    # Сохраняем ВСЕ данные из строки
+                    transaction: Dict = {
                         'date': date,
                         'amount': amount,
-                        'description': description,
-                        'category': category if category else None,
-                        'transaction_id': trans_id if trans_id else None,
-                    })
+                        'description': row.get('description', '').strip(),
+                    }
+
+                    # Добавляем ВСЕ остальные поля
+                    for key, value in row.items():
+                        if key not in ['date', 'amount', 'description']:
+                            if value and value not in ('', 'nan'):
+                                transaction[key] = value
+
+                    transactions.append(transaction)
 
                 except (ValueError, KeyError):
                     continue
@@ -70,7 +81,10 @@ def read_csv_transactions(file_path: Union[str, Path]) -> List[Dict]:
 
 
 def read_excel_transactions(file_path: Union[str, Path]) -> List[Dict]:
-    """Читает транзакции из Excel файла."""
+    """
+    Читает транзакции из Excel файла.
+    Сохраняет ВСЕ поля из исходной строки.
+    """
     transactions: List[Dict] = []
     file_path = Path(file_path)
 
@@ -82,17 +96,11 @@ def read_excel_transactions(file_path: Union[str, Path]) -> List[Dict]:
 
         df = pd.read_excel(file_path)
 
-        required = ['date', 'amount', 'description']
-        if not all(col in df.columns for col in required):
-            return []
-
         for _, row in df.iterrows():
             try:
-                date_val = row['date']
-                amount_val = row['amount']
-                description = str(row['description']).strip() if pd.notna(row['description']) else ''
-
-                if pd.isna(date_val) or pd.isna(amount_val):
+                # Парсим дату
+                date_val = row.get('date')
+                if pd.isna(date_val):
                     continue
 
                 if isinstance(date_val, (datetime, pd.Timestamp)):
@@ -104,6 +112,11 @@ def read_excel_transactions(file_path: Union[str, Path]) -> List[Dict]:
                     except ValueError:
                         date = datetime.strptime(date_str, '%Y-%m-%d')
 
+                # Парсим сумму
+                amount_val = row.get('amount')
+                if pd.isna(amount_val):
+                    continue
+
                 if isinstance(amount_val, (int, float)):
                     amount = Decimal(str(amount_val))
                 else:
@@ -113,25 +126,24 @@ def read_excel_transactions(file_path: Union[str, Path]) -> List[Dict]:
                         continue
                     amount = Decimal(amount_str)
 
-                category = None
-                if 'category' in df.columns and pd.notna(row['category']):
-                    cat_val = str(row['category']).strip()
-                    if cat_val not in ('nan', 'None', ''):
-                        category = cat_val
-
-                trans_id = None
-                if 'transaction_id' in df.columns and pd.notna(row['transaction_id']):
-                    tid_val = str(row['transaction_id']).strip()
-                    if tid_val not in ('nan', 'None', ''):
-                        trans_id = tid_val
-
-                transactions.append({
+                # Сохраняем ВСЕ данные из строки
+                transaction: Dict = {
                     'date': date,
                     'amount': amount,
-                    'description': description,
-                    'category': category,
-                    'transaction_id': trans_id,
-                })
+                    'description': str(row.get('description', '')).strip(),
+                }
+
+                # Добавляем ВСЕ остальные поля
+                for col in df.columns:
+                    if col not in ['date', 'amount', 'description']:
+                        value = row[col]
+                        if pd.notna(value) and str(value) not in ('nan', 'None', ''):
+                            if isinstance(value, (datetime, pd.Timestamp)):
+                                transaction[col] = value.isoformat()
+                            else:
+                                transaction[col] = str(value)
+
+                transactions.append(transaction)
 
             except (ValueError, KeyError):
                 continue
