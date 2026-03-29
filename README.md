@@ -1,3 +1,78 @@
+
+## Описание
+Проект содержит набор функций для обработки списка банковских операций:
+- Фильтрация операций по статусу (EXECUTED/CANCELED)
+- Сортировка операций по дате
+- Маскировка номеров карт и счетов
+
+## Установка и настройка
+
+### Предварительные требования
+- **Python**: версия 3.9 или выше
+- **Poetry**: менеджер зависимостей (рекомендуется)
+- **Git**: для клонирования репозитория
+
+### Пошаговая инструкция по установке
+
+#### 1. Клонирование репозитория
+```bash
+# SSH
+git clone git@github.com:Jeka533/my_project.git
+
+
+# Переход в директорию проекта
+cd my_project
+```
+
+### 2. Установи зависимости
+```bash
+pip install poetry
+poetry install
+```
+### 3. Запуск кода
+```bash
+poetry shell
+python -c "from src.processing import filter_by_state; print('OK')"
+```
+
+# Примеры использования
+from src.processing import filter_by_state
+
+operations = [
+    {'id': 41428829, 'state': 'EXECUTED', 'date': '2019-07-03T18:35'},
+    {'id': 939719570, 'state': 'EXECUTED', 'date': '2018-06-30T02:08'},
+    {'id': 594226727, 'state': 'CANCELED', 'date': '2018-09-12T21:27'},
+]
+
+### По умолчанию EXECUTED
+executed = filter_by_state(operations)
+print(executed)
+
+### CANCELED
+canceled = filter_by_state(operations, 'CANCELED')
+print(canceled)
+
+# Сортировка по дате
+from src.processing import sort_by_date
+
+### Сначала новые
+new_first = sort_by_date(operations)
+print(new_first)
+
+### Сначала старые
+old_first = sort_by_date(operations, is_reverse=False)
+print(old_first)
+
+# Маскировка
+from src.masks import get_mask_card_number, get_mask_account
+
+### Карта: 1234 56** **** 3456
+print(get_mask_card_number("1234567890123456"))
+
+### Счет: **7890
+print(get_mask_account("1234567890"))
+
+
 # Проект "Банковские операции"
 ## Описание проекта
 ### Проект "Банковские операции" представляет собой набор утилит для обработки и анализа списка банковских транзакций. В рамках проекта реализованы функции для фильтрации и сортировки операций по различным критериям.
@@ -29,6 +104,153 @@
 
 # Функция sort_by_date
 * def sort_by_date(transactions: list, reverse: bool = True)
+
+# Модуль generators 
+```bash
+* filter_by_currency - фильтрация транзакций по валюте
+
+* transaction_descriptions - генератор описаний транзакций
+
+* card_number_generator - генерация номеров банковских карт в заданном диапазоне
+```
+# Модуль generators - работа с генераторами
+````bash
+* Модуль предоставляет функции-генераторы для эффективной обработки больших объемов данных без загрузки всех результатов в память.
+
+1. Фильтрация по валюте - filter_by_currency
+Фильтрует транзакции по заданной валюте и возвращает итератор.
+
+python
+from src.generators import filter_by_currency
+
+transactions = [...]  # список транзакций
+
+# Получаем все USD транзакции
+usd_transactions = filter_by_currency(transactions, "USD")
+for _ in range(2):
+    print(next(usd_transactions))
+
+# Результат:
+# {
+#     "id": 939719570,
+#     "state": "EXECUTED",
+#     "date": "2018-06-30T02:08:58.425572",
+#     "operationAmount": {
+#         "amount": "9824.07",
+#         "currency": {"name": "USD", "code": "USD"}
+#     },
+#     "description": "Перевод организации",
+#     ...
+# }
+# {
+#     "id": 142264268,
+#     "state": "EXECUTED",
+#     "date": "2019-04-04T23:20:05.206878",
+#     "operationAmount": {
+#         "amount": "79114.93",
+#         "currency": {"name": "USD", "code": "USD"}
+#     },
+#     ...
+# }
+
+2. Генератор описаний - transaction_descriptions
+Возвращает описания каждой транзакции по очереди.
+
+python
+from src.generators import transaction_descriptions
+
+transactions = [...]  # список транзакций
+
+descriptions = transaction_descriptions(transactions)
+for _ in range(5):
+    print(next(descriptions))
+
+# Результат:
+# Перевод организации
+# Перевод со счета на счет
+# Перевод со счета на счет
+# Перевод с карты на карту
+# Перевод организации
+3. Генератор номеров карт - card_number_generator
+Генерирует номера банковских карт в заданном диапазоне с правильным форматированием.
+
+python
+from src.generators import card_number_generator
+
+# Генерация первых 5 номеров карт
+for card_number in card_number_generator(1, 5):
+    print(card_number)
+
+# Результат:
+# 0000 0000 0000 0001
+# 0000 0000 0000 0002
+# 0000 0000 0000 0003
+# 0000 0000 0000 0004
+# 0000 0000 0000 0005
+
+# Генерация в произвольном диапазоне
+for card_number in card_number_generator(9999999999999990, 9999999999999995):
+    print(card_number)
+
+# Результат:
+# 9999 9999 9999 9990
+# 9999 9999 9999 9991
+# 9999 9999 9999 9992
+# 9999 9999 9999 9993
+# 9999 9999 9999 9994
+# 9999 9999 9999 9995
+````
+# Преимущества использования генераторов
+````bash
+1. Экономия памяти - данные обрабатываются последовательно, не загружая все результаты в оперативную память
+
+2. Производительность - возможность начать обработку до завершения генерации всех данных
+
+3. Гибкость - удобно для поточной обработки больших объемов данных
+````
+
+
+# Тестирование
+
+##  Обзор тестирования
+Проект покрыт модульными тестами с использованием **pytest**. Всего реализовано **61 теста**, которые проверяют корректность работы основных функций.
+
+##  Запуск тестов
+
+### Установка зависимостей
+```bash
+# Установка pytest (если не установлен)
+poetry add --dev pytest
+# или через pip
+pip install pytest
+```
+# Описание тестов
+### Модуль masks
+* test_masks.py — тесты для функций маскировки:
+
+* get_mask_card_number: проверка маскировки карт (16 цифр → "1234 56** **** 3456")
+
+* get_mask_account: проверка маскировки счетов (20 цифр → "**7890")
+
+* Тестирование некорректных форматов (пробелы, буквы, короткие номера)
+
+### Модуль widget
+* test_widget.py — тесты для функций обработки:
+
+* mask_account_card: определение типа (карта/счет) и применение нужной маски
+
+* get_date: преобразование даты из ISO в формат "ДД.ММ.ГГГГ"
+
+* Параметризованные тесты для разных форматов ввода
+
+### Модуль processing
+* test_processing.py — тесты для фильтрации и сортировки:
+
+* filter_by_state: фильтрация по статусу (EXECUTED/CANCELED/PENDING)
+
+* sort_by_date: сортировка по дате (возрастание/убывание)
+
+* Тестирование граничных случаев (пустые списки, отсутствие статуса)
 
 # Контакты
 * #### Email: evgeniykoval833@mail.ru
